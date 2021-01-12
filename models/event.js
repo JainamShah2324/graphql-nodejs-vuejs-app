@@ -15,7 +15,7 @@ const eventSchema = new Schema({
         type: Number,
         required: true
     },
-    Date: {
+    date: {
         type: Date,
         required: true,
         default: Date.now

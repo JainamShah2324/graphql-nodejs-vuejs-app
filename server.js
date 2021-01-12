@@ -39,8 +39,14 @@ app.use('/graphql', graphqlHTTP({
         }
     `),
     rootValue: {
-        events: () => {
-            return events;
+        events: async () => {
+            return await Event.find()
+            .then((events) => {
+                return events
+            })
+            .catch((err) => {
+                console.log(err);
+            })
         },
 
         createEvent: async (args) => {
@@ -48,11 +54,11 @@ app.use('/graphql', graphqlHTTP({
                 title: args.eventInput.title,
                 description: args.eventInput.description,
                 price: parseFloat(args.eventInput.price),
-                date: new Date(args.eventInput.date)
+                date: new Date(args.eventInput.date).toISOString()
             });
-            await event.save()
-            .then((event) => {
-                return { ...event._doc };
+            return await event.save()
+            .then((eventData) => {
+                return eventData
             })
             .catch((err) => {
                 console.log(err);
