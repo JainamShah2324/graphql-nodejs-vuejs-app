@@ -10,6 +10,27 @@ const app = express();
 
 app.use(express.json());
 
+const getEventsByIds = async function (eventIds) {
+    return await Event.find({ _id: { $in: eventIds } })
+        .then((events) => {
+            return events.map(event => {
+                return { ...event._doc, created_by: getUserById.bind(this, event._doc.created_by) };
+            })
+        })
+}
+
+const getUserById = function (userId) {
+    return User.findById(userId)
+        .then((user) => {
+            return {
+                ...user._doc, password: null, createdEvents: getEventsByIds.bind(this, user.createdEvents)
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+        })
+}
+
 app.use('/graphql', graphqlHTTP({
     schema: buildSchema(`
         type Event {
@@ -18,12 +39,14 @@ app.use('/graphql', graphqlHTTP({
             description: String!
             price: Float!
             date: String!
+            created_by: User!
         }
 
         type User {
             _id: ID!
             email: String!
             password: String
+            createdEvents: [Event!]
         }
 
         input EventInput {
@@ -56,10 +79,16 @@ app.use('/graphql', graphqlHTTP({
         events: async () => {
             return await Event.find()
             .then((events) => {
-                return events
+                return events.map(event => {
+                    return {
+                        ...event._doc,
+                        created_by: getUserById.bind(this, event._doc.created_by)
+                    };
+                });
             })
             .catch((err) => {
                 console.log(err);
+                throw err;
             })
         },
 
@@ -78,7 +107,7 @@ app.use('/graphql', graphqlHTTP({
                         user.createdEvents.push(eventData.id);
                         return await user.save()
                             .then(() => {
-                                return eventData
+                                return { ...eventData._doc, created_by: getUserById.bind(this, eventData._doc.created_by) }
                             })
                             .catch((err) => {
                                 console.log(err);
